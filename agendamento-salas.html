@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agendamento de Salas</title>
+<style>
+  :root{
+    --roxo:#5219A1;
+    --roxo-escuro:#3d1178;
+    --roxo-claro:#f3eefc;
+    --amarelo:#ffad01;
+    --amarelo-escuro:#d68f00;
+    --texto:#2b2b33;
+    --texto-suave:#6b6b7b;
+    --borda:#e3e0ea;
+    --fundo:#f6f5f9;
+    --branco:#fff;
+    --erro:#c0392b;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+    background:var(--fundo);
+    color:var(--texto);
+  }
+  header{
+    background:var(--roxo);
+    border-bottom:4px solid var(--amarelo);
+    padding:16px 24px;
+    display:flex;
+    align-items:center;
+    gap:20px;
+    flex-wrap:wrap;
+  }
+  header img{height:44px;width:auto;display:block}
+  header h1{
+    margin:0;
+    font-size:20px;
+    font-weight:600;
+    color:var(--branco);
+    letter-spacing:.3px;
+  }
+  header h1 span{display:block;font-size:12px;font-weight:400;color:#d9c8f5;letter-spacing:.5px}
+  main{max-width:1180px;margin:24px auto;padding:0 16px 48px}
+  .card{
+    background:var(--branco);
+    border:1px solid var(--borda);
+    border-radius:10px;
+    box-shadow:0 1px 3px rgba(30,10,60,.06);
+    margin-bottom:24px;
+    overflow:hidden;
+  }
+  .card > h2{
+    margin:0;
+    padding:14px 20px;
+    font-size:15px;
+    font-weight:600;
+    color:var(--roxo);
+    border-bottom:1px solid var(--borda);
+    background:var(--roxo-claro);
+  }
+  form{padding:20px}
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:16px;
+  }
+  .campo{display:flex;flex-direction:column;gap:6px}
+  label{font-size:12px;font-weight:600;color:var(--texto-suave);text-transform:uppercase;letter-spacing:.4px}
+  input[type=text],input[type=datetime-local],select{
+    padding:9px 10px;
+    border:1px solid var(--borda);
+    border-radius:6px;
+    font-size:14px;
+    font-family:inherit;
+    background:var(--branco);
+    color:var(--texto);
+  }
+  input:focus,select:focus{outline:2px solid var(--amarelo);outline-offset:0;border-color:var(--amarelo)}
+  input[readonly]{background:var(--roxo-claro);color:var(--roxo);font-weight:600}
+  .acoes-form{
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+    margin-top:18px;padding-top:16px;border-top:1px solid var(--borda);
+  }
+  button{font-family:inherit;font-size:14px;border-radius:6px;cursor:pointer;border:1px solid transparent;padding:9px 18px;font-weight:600}
+  .btn-primario{background:var(--roxo);color:#fff}
+  .btn-primario:hover{background:var(--roxo-escuro)}
+  button:disabled{background:#cfcbd8;color:#807d8c;cursor:not-allowed}
+  .btn-secundario{background:var(--amarelo);color:#3d2a00}
+  .btn-secundario:hover{background:var(--amarelo-escuro)}
+  .btn-neutro{background:#fff;color:var(--texto-suave);border-color:var(--borda)}
+  .btn-neutro:hover{background:var(--fundo)}
+  .msg{font-size:13px;color:var(--erro);font-weight:600}
+  .envio{font-size:13px;color:var(--texto-suave);font-weight:600}
+  .envio.ok{color:#1e7a4b}
+  .envio.falha{color:var(--erro)}
+  .barra{
+    display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+    padding:14px 20px;border-bottom:1px solid var(--borda);
+  }
+  .barra input,.barra select{padding:8px 10px}
+  .barra .espaco{margin-left:auto;font-size:13px;color:var(--texto-suave)}
+  .tabela-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:14px;min-width:900px}
+  thead th{
+    background:var(--roxo);color:#fff;text-align:left;
+    padding:11px 14px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;
+  }
+  tbody td{padding:11px 14px;border-bottom:1px solid var(--borda);vertical-align:middle}
+  tbody tr:hover{background:var(--roxo-claro)}
+  .tag{
+    display:inline-block;padding:3px 10px;border-radius:999px;
+    font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  }
+  .tag-teams{background:var(--amarelo);color:#3d2a00}
+  .vazio{padding:34px 20px;text-align:center;color:var(--texto-suave);font-size:14px}
+  .paginacao{
+    display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+    padding:12px 20px;border-top:1px solid var(--borda);background:#fbfafd;
+  }
+  .paginacao label{text-transform:none;font-size:13px;color:var(--texto-suave)}
+  .paginacao select{padding:6px 8px;border:1px solid var(--borda);border-radius:6px;font-family:inherit;font-size:13px}
+  .paginacao button{padding:6px 12px;font-size:13px}
+  .paginacao .espaco{margin-left:auto;font-size:13px;color:var(--texto-suave);padding-right:6px}
+  @media (max-width:600px){
+    header h1{font-size:17px}
+    .acoes-form button{flex:1}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <img src="Cogna-02.png" alt="Logo">
+  <h1>Agendamento de Salas<span>Gestão de reservas por responsável do Teams</span></h1>
+</header>
+
+<main>
+
+  <section class="card">
+    <h2>Novo agendamento</h2>
+    <form id="formAgendamento" autocomplete="off">
+      <div class="grid">
+        <div class="campo">
+          <label for="sala">Sala</label>
+          <select id="sala" required>
+            <option value="">Selecione a sala...</option>
+            <option value="Sala 1">Sala 1</option>
+            <option value="Sala 2">Sala 2</option>
+            <option value="Sala 3">Sala 3</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="inicio">Data e hora de início</label>
+          <input type="datetime-local" id="inicio" required>
+        </div>
+        <div class="campo">
+          <label for="fim">Data e hora de término</label>
+          <input type="datetime-local" id="fim" required>
+        </div>
+        <div class="campo">
+          <label for="total">Tempo total</label>
+          <input type="text" id="total" readonly placeholder="--">
+        </div>
+        <div class="campo">
+          <label for="teams">ID do Teams (responsável)</label>
+          <input type="text" id="teams" placeholder="nome.sobrenome (igual ao seu Teams)" required>
+        </div>
+      </div>
+      <div class="acoes-form">
+        <button type="submit" class="btn-primario" id="btnSalvar">Salvar agendamento</button>
+        <button type="button" class="btn-neutro" id="btnLimpar">Limpar</button>
+        <span class="msg" id="msg"></span>
+        <span class="envio" id="envio"></span>
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Agendamentos realizados</h2>
+    <div class="barra">
+      <input type="text" id="busca" placeholder="Buscar por sala ou ID do Teams">
+      <select id="filtroSala">
+        <option value="todas">Todas as salas</option>
+        <option value="Sala 1">Sala 1</option>
+        <option value="Sala 2">Sala 2</option>
+        <option value="Sala 3">Sala 3</option>
+      </select>
+      <button type="button" class="btn-secundario" id="btnExportar">Exportar CSV</button>
+      <button type="button" class="btn-primario" id="btnAtualizar">Atualizar tabela</button>
+      <span class="espaco" id="resumo"></span>
+    </div>
+    <div class="tabela-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Sala</th>
+            <th>Início</th>
+            <th>Término</th>
+            <th>Tempo total</th>
+            <th>Responsável</th>
+          </tr>
+        </thead>
+        <tbody id="corpoTabela"></tbody>
+      </table>
+    </div>
+    <div class="vazio" id="vazio" hidden>Nenhum agendamento encontrado.</div>
+    <div class="paginacao" id="paginacao">
+      <label for="porPagina">Linhas por página</label>
+      <select id="porPagina">
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+      <span class="espaco" id="infoPagina"></span>
+      <button type="button" class="btn-neutro" id="btnPrimeira" title="Primeira página">&laquo;</button>
+      <button type="button" class="btn-neutro" id="btnAnterior">Anterior</button>
+      <button type="button" class="btn-neutro" id="btnProxima">Próxima</button>
+      <button type="button" class="btn-neutro" id="btnUltima" title="Última página">&raquo;</button>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  "use strict";
+
+  // Webhook do Power Automate (trigger "Quando uma solicitacao HTTP e recebida").
+  // ATENCAO: a URL contem a assinatura de acesso ao fluxo. Restrinja o acesso a este arquivo.
+  var WEBHOOK_URL = "https://defaulta50e7b768ea5492cbf1797d652fc3c.e9.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/93b7ff60d15c494a9701ac54aff74a3b/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=uoc88SMDIh6uoW86XNxZ3JckBFBzXm-j9uW_wWBASxo";
+
+  // Webhook de CONSULTA: fluxo que le o Microsoft List e devolve os agendamentos.
+  // E a unica fonte da tabela: nada e armazenado no navegador.
+  var WEBHOOK_CONSULTA_URL = "https://defaulta50e7b768ea5492cbf1797d652fc3c.e9.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/17/workflows/a773928009814b368598315d65685189/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=LGg6FbgnMc2asFfH_fcIIjXpyUQhry79Rjjb0D9w4N4";
+
+  var agendamentos = [];
+  var paginaAtual = 1;
+
+  var el = {
+    form: document.getElementById("formAgendamento"),
+    sala: document.getElementById("sala"),
+    inicio: document.getElementById("inicio"),
+    fim: document.getElementById("fim"),
+    total: document.getElementById("total"),
+    teams: document.getElementById("teams"),
+    msg: document.getElementById("msg"),
+    envio: document.getElementById("envio"),
+    btnSalvar: document.getElementById("btnSalvar"),
+    btnLimpar: document.getElementById("btnLimpar"),
+    btnExportar: document.getElementById("btnExportar"),
+    btnAtualizar: document.getElementById("btnAtualizar"),
+    busca: document.getElementById("busca"),
+    filtroSala: document.getElementById("filtroSala"),
+    paginacaoBox: document.getElementById("paginacao"),
+    porPagina: document.getElementById("porPagina"),
+    infoPagina: document.getElementById("infoPagina"),
+    btnPrimeira: document.getElementById("btnPrimeira"),
+    btnAnterior: document.getElementById("btnAnterior"),
+    btnProxima: document.getElementById("btnProxima"),
+    btnUltima: document.getElementById("btnUltima"),
+    corpo: document.getElementById("corpoTabela"),
+    vazio: document.getElementById("vazio"),
+    resumo: document.getElementById("resumo")
+  };
+
+  // ---- tempo total ----
+  function minutosEntre(inicio, fim){
+    var a = new Date(inicio), b = new Date(fim);
+    if(isNaN(a) || isNaN(b)) return null;
+    return Math.round((b - a) / 60000);
+  }
+
+  function formatarDuracao(min){
+    if(min === null || min < 0) return "--";
+    var dias = Math.floor(min / 1440);
+    var horas = Math.floor((min % 1440) / 60);
+    var minutos = min % 60;
+    var partes = [];
+    if(dias) partes.push(dias + (dias === 1 ? " dia" : " dias"));
+    if(horas) partes.push(horas + "h");
+    if(minutos || !partes.length) partes.push(minutos + "min");
+    return partes.join(" ");
+  }
+
+  function atualizarTotal(){
+    var min = minutosEntre(el.inicio.value, el.fim.value);
+    el.total.value = (min === null || min < 0) ? "" : formatarDuracao(min);
+    verificarConflitoAoVivo();
+  }
+
+  function formatarDataHora(valor){
+    if(!valor) return "--";
+    var d = new Date(valor);
+    if(isNaN(d)) return "--";
+    return d.toLocaleString("pt-BR", {
+      day:"2-digit", month:"2-digit", year:"numeric",
+      hour:"2-digit", minute:"2-digit"
+    });
+  }
+
+  // "2026-08-12T14:00" (hora local do navegador) -> "2026-08-12T17:00:00Z" (UTC).
+  // O SharePoint armazena em UTC; enviar com Z evita qualquer reinterpretacao de fuso.
+  function paraISO(valor){
+    var d = new Date(valor);
+    if(isNaN(d)) return "";
+    return d.toISOString().slice(0, 19) + "Z";
+  }
+
+  // ---- webhook ----
+  function montarPayload(a){
+    return {
+      inicio: paraISO(a.inicio),
+      termino: paraISO(a.fim),
+      sala: a.sala,
+      responsavel: a.teams
+    };
+  }
+
+  function enviarWebhook(a){
+    var corpo = JSON.stringify(montarPayload(a));
+    el.envio.textContent = "Enviando agenda...";
+    el.envio.className = "envio";
+
+    fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: corpo
+    }).then(function(resp){
+      if(!resp.ok) throw new Error("HTTP " + resp.status);
+      el.envio.textContent = "Agendamento enviado para a agenda.";
+      el.envio.className = "envio ok";
+    }).catch(function(){
+      // Se o navegador bloquear por CORS, reenvia como requisicao simples (sem preflight).
+      // Nesse modo a resposta e opaca: o fluxo recebe, mas nao da para confirmar o status.
+      return fetch(WEBHOOK_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=UTF-8" },
+        body: corpo
+      }).then(function(){
+        el.envio.textContent = "Agendamento enviado (sem confirmação de retorno).";
+        el.envio.className = "envio ok";
+      });
+    }).then(function(){
+      // Recarrega a agenda para exibir o item ja gravado. O fluxo leva alguns segundos.
+      setTimeout(atualizarTabela, 3000);
+    }).catch(function(erro){
+      el.envio.textContent = "Falha ao enviar o agendamento: " + erro.message +
+        ". O agendamento NÃO foi registrado, tente novamente.";
+      el.envio.className = "envio falha";
+    });
+  }
+
+  // Converte o item vindo do Microsoft List para o formato usado pela tabela.
+  function normalizar(item){
+    var inicio = item.inicio || item.Inicio || "";
+    var termino = item.termino || item.Termino || "";
+    return {
+      id: String(item.id || item.ID || inicio + "|" + (item.sala || "")),
+      sala: item.sala || item.Sala || "",
+      teams: item.responsavel || item.Responsavel || "",
+      inicio: inicio,
+      fim: termino,
+      minutos: minutosEntre(inicio, termino)
+    };
+  }
+
+  function atualizarTabela(){
+    el.btnAtualizar.disabled = true;
+    el.envio.textContent = "Consultando a agenda...";
+    el.envio.className = "envio";
+
+    // GET sem cabecalhos customizados: requisicao simples, sem preflight de CORS.
+    fetch(WEBHOOK_CONSULTA_URL, { method: "GET" })
+      .then(function(resp){
+        if(!resp.ok) throw new Error("HTTP " + resp.status);
+        return resp.json();
+      })
+      .then(function(dados){
+        var lista = Array.isArray(dados) ? dados : (dados.agendamentos || dados.value || []);
+        agendamentos = lista.map(normalizar).filter(function(a){ return a.inicio && a.fim; });
+        renderizar();
+        verificarConflitoAoVivo();
+        el.envio.textContent = "Tabela atualizada: " + agendamentos.length + " registro(s).";
+        el.envio.className = "envio ok";
+      })
+      .catch(function(erro){
+        // Sem dados locais de reserva: a agenda fica vazia ate a proxima consulta.
+        agendamentos = [];
+        renderizar();
+        el.envio.textContent = "Não foi possível consultar a agenda (" + erro.message +
+          "). Clique em Atualizar tabela para tentar de novo.";
+        el.envio.className = "envio falha";
+      })
+      .then(function(){ el.btnAtualizar.disabled = false; });
+  }
+
+  // ---- validação ----
+  function encontrarConflito(){
+    if(!el.sala.value || !el.inicio.value || !el.fim.value) return null;
+    var inicio = new Date(el.inicio.value), fim = new Date(el.fim.value);
+    if(isNaN(inicio) || isNaN(fim) || fim <= inicio) return null;
+    return agendamentos.find(function(a){
+      return a.sala === el.sala.value
+        && inicio < new Date(a.fim)
+        && new Date(a.inicio) < fim;
+    }) || null;
+  }
+
+  function textoConflito(c){
+    return "Conflito: a " + c.sala + " já está reservada de " + formatarDataHora(c.inicio) +
+           " até " + formatarDataHora(c.fim) + " por " + c.teams + ".";
+  }
+
+  // Lista os campos obrigatorios ainda em branco. Usa trim para nao aceitar so espacos.
+  function camposEmBranco(){
+    var faltando = [];
+    if(!el.sala.value) faltando.push("Sala");
+    if(!el.inicio.value) faltando.push("Data e hora de início");
+    if(!el.fim.value) faltando.push("Data e hora de término");
+    if(!el.teams.value.trim()) faltando.push("ID do Teams");
+    return faltando;
+  }
+
+  function validar(){
+    var faltando = camposEmBranco();
+    if(faltando.length){
+      return "Preencha todos os campos antes de salvar. Faltando: " + faltando.join(", ") + ".";
+    }
+    var min = minutosEntre(el.inicio.value, el.fim.value);
+    if(min === null){ return "Informe data e hora de início e de término válidas."; }
+    if(min <= 0){ return "A data/hora de término deve ser posterior à de início."; }
+    var conflito = encontrarConflito();
+    return conflito ? textoConflito(conflito) : "";
+  }
+
+  // Bloqueia o botao enquanto faltar campo ou houver conflito de horario.
+  function verificarConflitoAoVivo(){
+    var faltando = camposEmBranco();
+    var conflito = faltando.length ? null : encontrarConflito();
+    el.btnSalvar.disabled = faltando.length > 0 || !!conflito;
+    el.msg.textContent = conflito ? textoConflito(conflito) : "";
+  }
+
+  // ---- CRUD ----
+  el.form.addEventListener("submit", function(ev){
+    ev.preventDefault();
+    var erro = validar();
+    el.msg.textContent = erro;
+    if(erro) return;
+
+    var registro = {
+      id: String(Date.now()) + Math.random().toString(16).slice(2, 8),
+      sala: el.sala.value,
+      inicio: el.inicio.value,
+      fim: el.fim.value,
+      minutos: minutosEntre(el.inicio.value, el.fim.value),
+      teams: el.teams.value.trim()
+    };
+    limparForm();
+    enviarWebhook(registro);
+  });
+
+  function limparForm(){
+    el.form.reset();
+    el.total.value = "";
+    el.msg.textContent = "";
+    verificarConflitoAoVivo();
+  }
+
+  // ---- tabela ----
+  function filtrados(){
+    var termo = el.busca.value.trim().toLowerCase();
+    var sala = el.filtroSala.value;
+    return agendamentos
+      .filter(function(a){
+        if(sala !== "todas" && a.sala !== sala) return false;
+        if(!termo) return true;
+        return (a.sala + " " + a.teams).toLowerCase().indexOf(termo) >= 0;
+      })
+      // Mais recentes primeiro (data de início decrescente).
+      .sort(function(a, b){ return new Date(b.inicio) - new Date(a.inicio); });
+  }
+
+  function celula(texto, classe){
+    var td = document.createElement("td");
+    if(classe) td.className = classe;
+    td.textContent = texto;
+    return td;
+  }
+
+  function renderizar(){
+    var lista = filtrados();
+    var porPagina = parseInt(el.porPagina.value, 10);
+    var totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
+
+    // Reposiciona se a pagina atual deixou de existir (filtro, exclusao, nova consulta).
+    if(paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+    if(paginaAtual < 1) paginaAtual = 1;
+
+    var primeiro = (paginaAtual - 1) * porPagina;
+    var pagina = lista.slice(primeiro, primeiro + porPagina);
+
+    el.corpo.innerHTML = "";
+
+    pagina.forEach(function(a){
+      var tr = document.createElement("tr");
+
+      tr.appendChild(celula(a.sala));
+      tr.appendChild(celula(formatarDataHora(a.inicio)));
+      tr.appendChild(celula(formatarDataHora(a.fim)));
+      tr.appendChild(celula(formatarDuracao(a.minutos)));
+
+      var tdTeams = document.createElement("td");
+      var tagTeams = document.createElement("span");
+      tagTeams.className = "tag tag-teams";
+      tagTeams.textContent = a.teams;
+      tdTeams.appendChild(tagTeams);
+      tr.appendChild(tdTeams);
+
+      el.corpo.appendChild(tr);
+    });
+
+    el.vazio.hidden = lista.length > 0;
+
+    el.resumo.textContent = lista.length + " de " + agendamentos.length + " agendamento(s)";
+
+    el.infoPagina.textContent = lista.length
+      ? "Exibindo " + (primeiro + 1) + "-" + (primeiro + pagina.length) +
+        " de " + lista.length + " • Página " + paginaAtual + " de " + totalPaginas
+      : "Nenhum registro";
+
+    el.btnPrimeira.disabled = el.btnAnterior.disabled = paginaAtual <= 1;
+    el.btnProxima.disabled = el.btnUltima.disabled = paginaAtual >= totalPaginas;
+    el.paginacaoBox.hidden = lista.length === 0;
+  }
+
+  function irParaPagina(n){
+    paginaAtual = n;
+    renderizar();
+  }
+
+  // ---- exportação ----
+  function exportarCSV(){
+    var lista = filtrados();
+    if(!lista.length){ alert("Não há agendamentos para exportar."); return; }
+    var linhas = [["Sala","Inicio","Termino","Tempo total","ID Teams"]];
+    lista.forEach(function(a){
+      linhas.push([
+        a.sala, formatarDataHora(a.inicio), formatarDataHora(a.fim),
+        formatarDuracao(a.minutos), a.teams
+      ]);
+    });
+    var csv = linhas.map(function(l){
+      return l.map(function(c){ return '"' + String(c).replace(/"/g, '""') + '"'; }).join(";");
+    }).join("\r\n");
+
+    var blob = new Blob(["﻿" + csv], { type:"text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.href = url;
+    link.download = "agendamentos.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  el.inicio.addEventListener("change", atualizarTotal);
+  el.fim.addEventListener("change", atualizarTotal);
+  el.sala.addEventListener("change", verificarConflitoAoVivo);
+  el.teams.addEventListener("input", verificarConflitoAoVivo);
+  el.inicio.addEventListener("input", verificarConflitoAoVivo);
+  el.fim.addEventListener("input", verificarConflitoAoVivo);
+  // Filtrar ou buscar volta para a primeira pagina.
+  el.filtroSala.addEventListener("change", function(){ irParaPagina(1); });
+  el.busca.addEventListener("input", function(){ irParaPagina(1); });
+  el.porPagina.addEventListener("change", function(){ irParaPagina(1); });
+  el.btnPrimeira.addEventListener("click", function(){ irParaPagina(1); });
+  el.btnAnterior.addEventListener("click", function(){ irParaPagina(paginaAtual - 1); });
+  el.btnProxima.addEventListener("click", function(){ irParaPagina(paginaAtual + 1); });
+  el.btnUltima.addEventListener("click", function(){ irParaPagina(Number.MAX_SAFE_INTEGER); });
+  el.btnLimpar.addEventListener("click", limparForm);
+  el.btnExportar.addEventListener("click", exportarCSV);
+  el.btnAtualizar.addEventListener("click", atualizarTabela);
+
+  renderizar();
+  verificarConflitoAoVivo();
+  atualizarTabela();
+})();
+</script>
+</body>
+</html>
