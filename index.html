@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agendamento de Salas</title>
-<link rel="icon" type="image/x-icon" href="https://www.cogna.com.br/favicon.ico">
 <style>
   :root{
     --roxo:#5219A1;
@@ -116,11 +115,60 @@
     font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
   }
   .tag-teams{background:var(--amarelo);color:#3d2a00}
+  .tag-agendado{background:var(--roxo-claro);color:var(--roxo);border:1px solid #d9d0ec}
+  .tag-uso{background:#1e7a4b;color:#fff}
+  .tag-aguardando{background:var(--amarelo);color:#3d2a00}
+  .tag-finalizado{background:#3A4045;color:#fff}
+  .tag-nao-usada{background:#FFED30;color:#3d3a00}
+  .campo-botao{justify-content:flex-end;gap:8px}
+  .campo-botao button{width:100%}
+  .cards{
+    display:grid;gap:16px;padding:20px;
+    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  }
+  .card-uso{
+    border:1px solid var(--borda);border-left:6px solid var(--amarelo);
+    border-radius:10px;padding:16px 18px;background:var(--roxo-claro);
+  }
+  .card-uso h3{
+    margin:0 0 10px 0;font-size:16px;color:var(--roxo);
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  }
+  .card-uso .pulso{
+    width:10px;height:10px;border-radius:50%;background:#1e7a4b;
+    box-shadow:0 0 0 3px rgba(30,122,75,.2);flex:none;
+  }
+  .card-aguardando{border-left-color:#3A4045;background:#f4f3f7}
+  .card-aguardando .pulso{background:var(--amarelo-escuro);box-shadow:0 0 0 3px rgba(255,173,1,.25)}
+  .card-sub{margin:-4px 0 10px 0;font-size:13px;color:var(--texto-suave)}
+  .card-uso dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:13px}
+  .card-uso dt{color:var(--texto-suave);font-weight:600}
+  .card-uso dd{margin:0;color:var(--texto)}
+  .modal-fundo{
+    position:fixed;inset:0;background:rgba(30,10,60,.55);
+    display:flex;align-items:center;justify-content:center;padding:16px;z-index:10;
+  }
+  /* display:flex sobrescreve o hidden do navegador: sem isto o modal nasce aberto. */
+  .modal-fundo[hidden]{display:none}
+  .modal{
+    background:var(--branco);border-radius:12px;padding:24px;
+    width:100%;max-width:420px;box-shadow:0 20px 50px rgba(30,10,60,.35);
+  }
+  .modal h3{margin:0 0 6px 0;font-size:17px;color:var(--roxo)}
+  .modal-texto{margin:0 0 18px 0;font-size:13px;line-height:1.5;color:var(--texto-suave)}
+  .modal .campo{margin-bottom:14px}
+  .modal input,.modal select{width:100%}
+  .modal #codigo{
+    font-size:24px;letter-spacing:8px;text-align:center;font-weight:700;color:var(--roxo);
+  }
+  .modal-acoes{display:flex;gap:10px;margin-top:16px}
+  .modal-acoes button{flex:1}
   .vazio{padding:34px 20px;text-align:center;color:var(--texto-suave);font-size:14px}
   .paginacao{
     display:flex;gap:8px;align-items:center;flex-wrap:wrap;
     padding:12px 20px;border-top:1px solid var(--borda);background:#fbfafd;
   }
+  .paginacao[hidden]{display:none}
   .paginacao label{text-transform:none;font-size:13px;color:var(--texto-suave)}
   .paginacao select{padding:6px 8px;border:1px solid var(--borda);border-radius:6px;font-family:inherit;font-size:13px}
   .paginacao button{padding:6px 12px;font-size:13px}
@@ -169,6 +217,10 @@
           <label for="teams">ID do Teams (responsável)</label>
           <input type="text" id="teams" placeholder="nome.sobrenome (igual ao seu Teams)" required>
         </div>
+        <div class="campo campo-botao">
+          <button type="button" class="btn-secundario" id="btnAbrirCodigo">Já vou usar a sala</button>
+          <button type="button" class="btn-neutro" id="btnAbrirCancelar">Cancelar agendamento</button>
+        </div>
       </div>
       <div class="acoes-form">
         <button type="submit" class="btn-primario" id="btnSalvar">Salvar agendamento</button>
@@ -179,17 +231,21 @@
     </form>
   </section>
 
+  <section class="card" id="secaoEmUso" hidden>
+    <h2>Salas em uso agora</h2>
+    <div class="cards" id="cardsEmUso"></div>
+  </section>
+
   <section class="card">
     <h2>Agendamentos realizados</h2>
     <div class="barra">
-      <input type="text" id="busca" placeholder="Buscar por sala ou ID do Teams">
+      <input type="text" id="busca" placeholder="Buscar por sala, responsável ou data (ex.: 13/08/2026)">
       <select id="filtroSala">
         <option value="todas">Todas as salas</option>
         <option value="Sala 1">Sala 1</option>
         <option value="Sala 2">Sala 2</option>
         <option value="Sala 3">Sala 3</option>
       </select>
-      <button type="button" class="btn-secundario" id="btnExportar">Exportar CSV</button>
       <button type="button" class="btn-primario" id="btnAtualizar">Atualizar tabela</button>
       <span class="espaco" id="resumo"></span>
     </div>
@@ -202,6 +258,7 @@
             <th>Término</th>
             <th>Tempo total</th>
             <th>Responsável</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody id="corpoTabela"></tbody>
@@ -226,6 +283,30 @@
 
 </main>
 
+<div class="modal-fundo" id="modalCodigo" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloModal">
+    <h3 id="tituloModal">Liberar o uso da sala</h3>
+    <p class="modal-texto" id="textoModal">Selecione o agendamento e informe o código de 6 dígitos que você recebeu no Teams.</p>
+
+    <div class="campo">
+      <label for="agendamentoCodigo">Agendamento</label>
+      <select id="agendamentoCodigo"></select>
+    </div>
+
+    <div class="campo">
+      <label for="codigo">Código da sala</label>
+      <input type="text" id="codigo" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="off">
+    </div>
+
+    <span class="msg" id="msgCodigo"></span>
+
+    <div class="modal-acoes">
+      <button type="button" class="btn-primario" id="btnConfirmarCodigo">Confirmar código</button>
+      <button type="button" class="btn-neutro" id="btnFecharCodigo">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   "use strict";
@@ -238,8 +319,20 @@
   // E a unica fonte da tabela: nada e armazenado no navegador.
   var WEBHOOK_CONSULTA_URL = "https://defaulta50e7b768ea5492cbf1797d652fc3c.e9.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/17/workflows/a773928009814b368598315d65685189/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=LGg6FbgnMc2asFfH_fcIIjXpyUQhry79Rjjb0D9w4N4";
 
+  // Webhook de VALIDACAO: recebe { id, codigo } e devolve { valido: true/false }.
+  // Se valido, o fluxo muda o Status do item para "Em uso" no Microsoft List.
+  var WEBHOOK_CODIGO_URL = "https://defaulta50e7b768ea5492cbf1797d652fc3c.e9.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/17/workflows/777eea30c47048738937aa35afc45766/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=8V_1gALBiSKZJ88DqLBkKAKnDjxU4wHj1XS99KUGY0w";
+
+  // Webhook de CANCELAMENTO: recebe id e codigo na query string e devolve { valido: true/false }.
+  // Se valido, o fluxo muda o Status do item para "Cancelado" no Microsoft List.
+  var WEBHOOK_CANCELAR_URL = "https://defaulta50e7b768ea5492cbf1797d652fc3c.e9.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/14/workflows/8b6841de46064d338dd0e278d62899fa/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=NPSC7fsuHtWASl4E4oRFVfKd8y-b4zJUAHJm3rW5k6o";
+
   var agendamentos = [];
   var paginaAtual = 1;
+  var modoModal = "liberar"; // "liberar" ou "cancelar"
+
+  // Antecedencia maxima, em minutos, para liberar o uso da sala com o codigo.
+  var TOLERANCIA_MIN = 5;
 
   var el = {
     form: document.getElementById("formAgendamento"),
@@ -252,8 +345,19 @@
     envio: document.getElementById("envio"),
     btnSalvar: document.getElementById("btnSalvar"),
     btnLimpar: document.getElementById("btnLimpar"),
-    btnExportar: document.getElementById("btnExportar"),
     btnAtualizar: document.getElementById("btnAtualizar"),
+    secaoEmUso: document.getElementById("secaoEmUso"),
+    cardsEmUso: document.getElementById("cardsEmUso"),
+    btnAbrirCodigo: document.getElementById("btnAbrirCodigo"),
+    btnAbrirCancelar: document.getElementById("btnAbrirCancelar"),
+    modalCodigo: document.getElementById("modalCodigo"),
+    tituloModal: document.getElementById("tituloModal"),
+    textoModal: document.getElementById("textoModal"),
+    agendamentoCodigo: document.getElementById("agendamentoCodigo"),
+    codigo: document.getElementById("codigo"),
+    msgCodigo: document.getElementById("msgCodigo"),
+    btnConfirmarCodigo: document.getElementById("btnConfirmarCodigo"),
+    btnFecharCodigo: document.getElementById("btnFecharCodigo"),
     busca: document.getElementById("busca"),
     filtroSala: document.getElementById("filtroSala"),
     paginacaoBox: document.getElementById("paginacao"),
@@ -311,13 +415,19 @@
     return d.toISOString().slice(0, 19) + "Z";
   }
 
+  // Codigo numerico de 6 digitos, sempre entre 100000 e 999999 (nunca comeca com zero).
+  function gerarCodigo(){
+    return String(Math.floor(100000 + Math.random() * 900000));
+  }
+
   // ---- webhook ----
   function montarPayload(a){
     return {
       inicio: paraISO(a.inicio),
       termino: paraISO(a.fim),
       sala: a.sala,
-      responsavel: a.teams
+      responsavel: a.teams,
+      codigoSala: a.codigoSala
     };
   }
 
@@ -357,17 +467,50 @@
   }
 
   // Converte o item vindo do Microsoft List para o formato usado pela tabela.
+  // O id e o ID do proprio List: e ele que sera enviado na validacao do codigo.
   function normalizar(item){
     var inicio = item.inicio || item.Inicio || "";
     var termino = item.termino || item.Termino || "";
     return {
-      id: String(item.id || item.ID || inicio + "|" + (item.sala || "")),
+      id: String(item.id || item.ID || item.Id || ""),
       sala: item.sala || item.Sala || "",
       teams: item.responsavel || item.Responsavel || "",
       inicio: inicio,
       fim: termino,
-      minutos: minutosEntre(inicio, termino)
+      minutos: minutosEntre(inicio, termino),
+      status: item.status || item.Status || ""
     };
+  }
+
+  function emUso(a){
+    return String(a.status).toLowerCase() === "em uso";
+  }
+
+  // Status exibido na tela, derivado do relogio. O Microsoft List continua com "Em uso":
+  // "Finalizado" e "Aguardando liberação" existem so na interface, sem fluxo extra.
+  function statusExibicao(a){
+    var agora = new Date();
+    var terminou = agora >= new Date(a.fim);
+
+    // Nunca liberada pelo codigo e o periodo ja passou: a sala nao chegou a ser usada.
+    if(!emUso(a)) return terminou ? "Não Usada" : "Agendado";
+
+    if(terminou) return "Finalizado";
+    if(agora < new Date(a.inicio)) return "Aguardando liberação";
+    return "Em uso";
+  }
+
+  var CLASSE_STATUS = {
+    "Agendado": "tag-agendado",
+    "Aguardando liberação": "tag-aguardando",
+    "Em uso": "tag-uso",
+    "Finalizado": "tag-finalizado",
+    "Não Usada": "tag-nao-usada"
+  };
+
+  // Card visivel: teve o codigo validado e o periodo ainda nao acabou.
+  function temCard(a){
+    return emUso(a) && new Date() < new Date(a.fim);
   }
 
   function atualizarTabela(){
@@ -383,7 +526,10 @@
       })
       .then(function(dados){
         var lista = Array.isArray(dados) ? dados : (dados.agendamentos || dados.value || []);
-        agendamentos = lista.map(normalizar).filter(function(a){ return a.inicio && a.fim; });
+        // Cancelados continuam no Microsoft List, mas somem da tela e liberam o horario.
+        agendamentos = lista.map(normalizar).filter(function(a){
+          return a.inicio && a.fim && String(a.status).toLowerCase() !== "cancelado";
+        });
         renderizar();
         verificarConflitoAoVivo();
         el.envio.textContent = "Tabela atualizada: " + agendamentos.length + " registro(s).";
@@ -432,19 +578,50 @@
     if(faltando.length){
       return "Preencha todos os campos antes de salvar. Faltando: " + faltando.join(", ") + ".";
     }
-    var min = minutosEntre(el.inicio.value, el.fim.value);
-    if(min === null){ return "Informe data e hora de início e de término válidas."; }
-    if(min <= 0){ return "A data/hora de término deve ser posterior à de início."; }
+
+    var inicio = new Date(el.inicio.value), fim = new Date(el.fim.value);
+    if(isNaN(inicio) || isNaN(fim)){ return "Informe data e hora de início e de término válidas."; }
+
+    var agora = new Date();
+    agora.setSeconds(0, 0);
+    if(inicio < agora){
+      var mesmoDia = inicio.toDateString() === agora.toDateString();
+      return mesmoDia
+        ? "O horário de início não pode ser anterior ao horário atual (" +
+          agora.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" }) + ")."
+        : "Não é possível agendar para uma data anterior a hoje.";
+    }
+    if(fim <= inicio){
+      return "A data/hora de término deve ser posterior à de início.";
+    }
+
     var conflito = encontrarConflito();
     return conflito ? textoConflito(conflito) : "";
   }
 
-  // Bloqueia o botao enquanto faltar campo ou houver conflito de horario.
+  // Preenche o atributo min dos campos de data com o momento atual,
+  // para o proprio seletor do navegador ja bloquear o passado.
+  function aplicarMinimos(){
+    var agora = new Date();
+    agora.setSeconds(0, 0);
+    var minAgora = paraLocalInput(agora);
+    el.inicio.min = minAgora;
+    el.fim.min = el.inicio.value || minAgora;
+  }
+
+  function paraLocalInput(d){
+    function pad(n){ return String(n).padStart(2, "0"); }
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) +
+      "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  // Bloqueia o botao enquanto houver qualquer impedimento e mostra o motivo.
   function verificarConflitoAoVivo(){
+    aplicarMinimos();
     var faltando = camposEmBranco();
-    var conflito = faltando.length ? null : encontrarConflito();
-    el.btnSalvar.disabled = faltando.length > 0 || !!conflito;
-    el.msg.textContent = conflito ? textoConflito(conflito) : "";
+    var erro = faltando.length ? "" : validar();
+    el.btnSalvar.disabled = faltando.length > 0 || !!erro;
+    el.msg.textContent = erro;
   }
 
   // ---- CRUD ----
@@ -460,7 +637,8 @@
       inicio: el.inicio.value,
       fim: el.fim.value,
       minutos: minutosEntre(el.inicio.value, el.fim.value),
-      teams: el.teams.value.trim()
+      teams: el.teams.value.trim(),
+      codigoSala: gerarCodigo()
     };
     limparForm();
     enviarWebhook(registro);
@@ -481,7 +659,12 @@
       .filter(function(a){
         if(sala !== "todas" && a.sala !== sala) return false;
         if(!termo) return true;
-        return (a.sala + " " + a.teams).toLowerCase().indexOf(termo) >= 0;
+        // Busca em sala, responsavel e nas datas/horas formatadas (13/08/2026, 14:00...).
+        var alvo = [
+          a.sala, a.teams, a.status,
+          formatarDataHora(a.inicio), formatarDataHora(a.fim)
+        ].join(" ").toLowerCase();
+        return alvo.indexOf(termo) >= 0;
       })
       // Mais recentes primeiro (data de início decrescente).
       .sort(function(a, b){ return new Date(b.inicio) - new Date(a.inicio); });
@@ -523,6 +706,14 @@
       tdTeams.appendChild(tagTeams);
       tr.appendChild(tdTeams);
 
+      var tdStatus = document.createElement("td");
+      var tagStatus = document.createElement("span");
+      var status = statusExibicao(a);
+      tagStatus.className = "tag " + (CLASSE_STATUS[status] || "tag-agendado");
+      tagStatus.textContent = status;
+      tdStatus.appendChild(tagStatus);
+      tr.appendChild(tdStatus);
+
       el.corpo.appendChild(tr);
     });
 
@@ -538,6 +729,8 @@
     el.btnPrimeira.disabled = el.btnAnterior.disabled = paginaAtual <= 1;
     el.btnProxima.disabled = el.btnUltima.disabled = paginaAtual >= totalPaginas;
     el.paginacaoBox.hidden = lista.length === 0;
+
+    renderizarCards();
   }
 
   function irParaPagina(n){
@@ -545,29 +738,196 @@
     renderizar();
   }
 
-  // ---- exportação ----
-  function exportarCSV(){
-    var lista = filtrados();
-    if(!lista.length){ alert("Não há agendamentos para exportar."); return; }
-    var linhas = [["Sala","Inicio","Termino","Tempo total","ID Teams"]];
-    lista.forEach(function(a){
-      linhas.push([
-        a.sala, formatarDataHora(a.inicio), formatarDataHora(a.fim),
-        formatarDuracao(a.minutos), a.teams
-      ]);
-    });
-    var csv = linhas.map(function(l){
-      return l.map(function(c){ return '"' + String(c).replace(/"/g, '""') + '"'; }).join(";");
-    }).join("\r\n");
-
-    var blob = new Blob(["﻿" + csv], { type:"text/csv;charset=utf-8;" });
-    var url = URL.createObjectURL(blob);
-    var link = document.createElement("a");
-    link.href = url;
-    link.download = "agendamentos.csv";
-    link.click();
-    URL.revokeObjectURL(url);
+  // ---- cards de salas em uso ----
+  function linhaCard(dt, dd){
+    var termo = document.createElement("dt");
+    termo.textContent = dt;
+    var desc = document.createElement("dd");
+    desc.textContent = dd;
+    return [termo, desc];
   }
+
+  function renderizarCards(){
+    var emAndamento = agendamentos.filter(temCard)
+      .sort(function(a, b){ return new Date(a.fim) - new Date(b.fim); });
+
+    el.cardsEmUso.innerHTML = "";
+    el.secaoEmUso.hidden = emAndamento.length === 0;
+
+    emAndamento.forEach(function(a){
+      var aguardando = statusExibicao(a) === "Aguardando liberação";
+
+      var card = document.createElement("div");
+      card.className = aguardando ? "card-uso card-aguardando" : "card-uso";
+
+      var titulo = document.createElement("h3");
+      var pulso = document.createElement("span");
+      pulso.className = "pulso";
+      titulo.appendChild(pulso);
+      titulo.appendChild(document.createTextNode(
+        aguardando ? "Aguardando liberação da sala" : a.sala + " em uso"
+      ));
+      card.appendChild(titulo);
+
+      if(aguardando){
+        var sub = document.createElement("p");
+        sub.className = "card-sub";
+        sub.textContent = a.sala + " • início às " +
+          new Date(a.inicio).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" });
+        card.appendChild(sub);
+      }
+
+      var dl = document.createElement("dl");
+      var data = new Date(a.inicio).toLocaleDateString("pt-BR");
+      var hi = new Date(a.inicio).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" });
+      var hf = new Date(a.fim).toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" });
+
+      linhaCard("Data:", data).forEach(function(n){ dl.appendChild(n); });
+      linhaCard("Período:", hi + " às " + hf + " (Tempo Total: " + formatarDuracao(a.minutos) + ")")
+        .forEach(function(n){ dl.appendChild(n); });
+      linhaCard("Usuário:", a.teams).forEach(function(n){ dl.appendChild(n); });
+
+      card.appendChild(dl);
+      el.cardsEmUso.appendChild(card);
+    });
+  }
+
+  // ---- modal de codigo da sala ----
+  // Liberar: agendamentos que ainda nao terminaram e ainda nao foram liberados.
+  // Cancelar: qualquer agendamento que ainda nao terminou (inclusive os em uso).
+  function elegiveisParaCodigo(){
+    var agora = new Date();
+    return agendamentos
+      .filter(function(a){
+        if(!a.id || new Date(a.fim) <= agora) return false;
+        return modoModal === "cancelar" ? true : !emUso(a);
+      })
+      .sort(function(a, b){ return new Date(a.inicio) - new Date(b.inicio); });
+  }
+
+  var TEXTOS_MODAL = {
+    liberar: {
+      titulo: "Liberar o uso da sala",
+      texto: "Selecione o agendamento e informe o código de 6 dígitos que você recebeu no Teams. A liberação é permitida a partir de 5 minutos antes do horário de início.",
+      botao: "Confirmar código",
+      vazio: "Nenhum agendamento disponível para liberar."
+    },
+    cancelar: {
+      titulo: "Cancelar agendamento",
+      texto: "Selecione o agendamento e informe o mesmo código de 6 dígitos que você recebeu no Teams. O cancelamento não pode ser desfeito pela tela.",
+      botao: "Cancelar agendamento",
+      vazio: "Nenhum agendamento disponível para cancelar."
+    }
+  };
+
+  function abrirModalCodigo(modo){
+    modoModal = modo;
+    var t = TEXTOS_MODAL[modo];
+    var lista = elegiveisParaCodigo();
+
+    el.tituloModal.textContent = t.titulo;
+    el.textoModal.textContent = t.texto;
+    el.btnConfirmarCodigo.textContent = t.botao;
+    el.agendamentoCodigo.innerHTML = "";
+
+    lista.forEach(function(a){
+      var op = document.createElement("option");
+      op.value = a.id;
+      op.textContent = a.sala + " • " + formatarDataHora(a.inicio) + " • " + a.teams;
+      el.agendamentoCodigo.appendChild(op);
+    });
+
+    el.codigo.value = "";
+    el.msgCodigo.textContent = lista.length ? "" : t.vazio;
+    el.btnConfirmarCodigo.disabled = lista.length === 0;
+    el.modalCodigo.hidden = false;
+    if(lista.length) el.codigo.focus();
+  }
+
+  function fecharModalCodigo(){
+    el.modalCodigo.hidden = true;
+  }
+
+  function confirmarCodigo(){
+    var id = el.agendamentoCodigo.value;
+    var codigo = el.codigo.value.trim();
+
+    if(!/^\d{6}$/.test(codigo)){
+      el.msgCodigo.textContent = "O código deve ter exatamente 6 dígitos numéricos.";
+      return;
+    }
+    var cancelando = modoModal === "cancelar";
+
+    // Liberacao so a partir de TOLERANCIA_MIN minutos antes do inicio. Cancelamento nao tem limite.
+    if(!cancelando){
+      var alvo = agendamentos.find(function(a){ return a.id === id; });
+      if(alvo){
+        var liberaEm = new Date(new Date(alvo.inicio).getTime() - TOLERANCIA_MIN * 60000);
+        if(new Date() < liberaEm){
+          el.msgCodigo.textContent = "Este agendamento só pode ser liberado a partir das " +
+            liberaEm.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" }) +
+            " de " + liberaEm.toLocaleDateString("pt-BR") + ".";
+          return;
+        }
+      }
+    }
+
+    var base = cancelando ? WEBHOOK_CANCELAR_URL : WEBHOOK_CODIGO_URL;
+
+    if(!base){
+      el.msgCodigo.textContent = "Webhook não configurado (" +
+        (cancelando ? "WEBHOOK_CANCELAR_URL" : "WEBHOOK_CODIGO_URL") + ").";
+      return;
+    }
+
+    el.btnConfirmarCodigo.disabled = true;
+    el.msgCodigo.textContent = "Validando código...";
+
+    // GET com os dados na query string, sem corpo e sem cabecalhos customizados:
+    // requisicao simples, sem preflight de CORS. Mesmo formato do fluxo de consulta.
+    var url = base +
+      "&id=" + encodeURIComponent(id) +
+      "&codigo=" + encodeURIComponent(codigo);
+
+    fetch(url, { method: "GET" })
+      .then(function(resp){
+        if(!resp.ok) throw new Error("HTTP " + resp.status);
+        return resp.json();
+      })
+      .then(function(res){
+        if(res && (res.valido === true || res.valido === "true")){
+          fecharModalCodigo();
+          el.envio.textContent = cancelando
+            ? "Agendamento cancelado."
+            : "Código válido. Sala liberada para uso.";
+          el.envio.className = "envio ok";
+          atualizarTabela();
+        }else{
+          el.msgCodigo.textContent = "Código inválido para este agendamento.";
+        }
+      })
+      .catch(function(erro){
+        el.msgCodigo.textContent = "Não foi possível validar o código (" + erro.message + ").";
+      })
+      .then(function(){ el.btnConfirmarCodigo.disabled = false; });
+  }
+
+  el.btnAbrirCodigo.addEventListener("click", function(){ abrirModalCodigo("liberar"); });
+  el.btnAbrirCancelar.addEventListener("click", function(){ abrirModalCodigo("cancelar"); });
+  el.btnFecharCodigo.addEventListener("click", fecharModalCodigo);
+  el.btnConfirmarCodigo.addEventListener("click", confirmarCodigo);
+  el.codigo.addEventListener("input", function(){
+    this.value = this.value.replace(/\D/g, "").slice(0, 6);
+  });
+  el.codigo.addEventListener("keydown", function(ev){
+    if(ev.key === "Enter") confirmarCodigo();
+  });
+  el.modalCodigo.addEventListener("click", function(ev){
+    if(ev.target === el.modalCodigo) fecharModalCodigo();
+  });
+  document.addEventListener("keydown", function(ev){
+    if(ev.key === "Escape" && !el.modalCodigo.hidden) fecharModalCodigo();
+  });
 
   el.inicio.addEventListener("change", atualizarTotal);
   el.fim.addEventListener("change", atualizarTotal);
@@ -584,12 +944,16 @@
   el.btnProxima.addEventListener("click", function(){ irParaPagina(paginaAtual + 1); });
   el.btnUltima.addEventListener("click", function(){ irParaPagina(Number.MAX_SAFE_INTEGER); });
   el.btnLimpar.addEventListener("click", limparForm);
-  el.btnExportar.addEventListener("click", exportarCSV);
   el.btnAtualizar.addEventListener("click", atualizarTabela);
 
   renderizar();
   verificarConflitoAoVivo();
   atualizarTabela();
+
+  // Reavalia os cards a cada 30s: entram quando chega a hora e saem quando o periodo acaba.
+  setInterval(renderizar, 30000);
+  // Recarrega a agenda a cada 5 minutos para refletir reservas feitas por outras pessoas.
+  setInterval(atualizarTabela, 300000);
 })();
 </script>
 </body>
